@@ -88,34 +88,35 @@ class SQLObject
     @attributes.values
   end
 
+  #I did not write this piece from scratch, it was provided in the instructions
   def insert
-    my_table = self.class.table_name
-    my_columns = self.class.columns.drop(1)
-
-    column_labels = my_columns.map(&:to_s).join(', ')
-    q_marks = (['?'] * my_columns.count).join(', ')
+    # drop 1 to avoid inserting id (the first column)
+    columns = self.class.columns.drop(1)
+    col_names = columns.map(&:to_s).join(", ")
+    question_marks = (["?"] * columns.count).join(", ")
 
     DBConnection.execute(<<-SQL, *attribute_values.drop(1))
       INSERT INTO
-        #{my_table} #{column_labels}
+        #{self.class.table_name} (#{col_names})
       VALUES
-        #{q_marks}
+        (#{question_marks})
     SQL
 
     self.id = DBConnection.last_insert_row_id
   end
 
+  #I did not write this piece from scratch, it was provided in the instructions
   def update
-    # mapped ::columns to #{attr_name} = ?
-    question_marks = self.class.columns.map { |attr_name| "#{attr_name} = ?" }.join(', ')
+    set_line = self.class.columns
+      .map { |attr| "#{attr} = ?" }.join(", ")
 
-    DBConnection.execute(<<-SQL)
+    DBConnection.execute(<<-SQL, *attribute_values, id)
       UPDATE
         #{self.class.table_name}
       SET
-        #{question_marks}
+        #{set_line}
       WHERE
-        id = #{self.id}
+        #{self.class.table_name}.id = ?
     SQL
   end
 
